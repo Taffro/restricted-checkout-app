@@ -8,6 +8,7 @@ import {
   useApi,
   useCartLines,
   useTranslate,
+	Checkbox
 } from "@shopify/ui-extensions-react/checkout";
 
 // 1. Choose an extension target
@@ -21,6 +22,7 @@ function Extension() {
   const cartLines = useCartLines();
 	const { query } = useApi();
 	const [hasRestricted, setHasRestricted] = useState(false);
+	const [confirmed, setConfirmed] = useState(false);
 
   console.log("Cart Lines:", cartLines);
 
@@ -61,15 +63,16 @@ function Extension() {
 	}, [cartLines]);
 
   // 3. Render a UI
-  return (
-    <BlockStack border={"dotted"} padding={"tight"}>
-      <Banner title="restricted-product-block">
-        {translate("welcome", {
-          target: <Text emphasis="italic">{extension.target}</Text>,
-        })}
-      </Banner>
-    </BlockStack>
-  );
+	if (!hasRestricted) {
+		return null;
+	}
 
+	return (
+		<BlockStack border="dotted" padding="tight">
+			<Checkbox checked={confirmed} onChange={setConfirmed}>
+				I confirm I am eligable to purchase restricted products.
+			</Checkbox>
+		</BlockStack>
+	)
 	
 }
