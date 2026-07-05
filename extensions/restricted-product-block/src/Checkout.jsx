@@ -1,3 +1,5 @@
+
+import { useState, useEffect } from "react";
 import {
   reactExtension,
   Banner,
@@ -17,6 +19,46 @@ function Extension() {
   const translate = useTranslate();
   const { extension } = useApi();
   const cartLines = useCartLines();
+	const { query } = useApi();
+	const [hasRestricted, setHasRestricted] = useState(false);
+
+  console.log("Cart Lines:", cartLines);
+
+  const productIds = cartLines.map(line => line.merchandise.product.id);
+  console.log("Product IDs:", productIds);
+	console.log("hasRestricted:", hasRestricted);
+
+	useEffect(() => {
+
+		// If no lines, nothing to restrict and we can exit out early
+		if (productIds.length === 0) { setHasRestricted(false); return; }
+
+		// Fetch tags for each cart product by ID.
+		query(
+			`query ($ids: [ID!]!) {
+				nodes(ids: $ids) {
+					... on Product { id tags }	
+				}
+			}`,
+			{ variables: { ids: productIds }}
+		)
+		.then(({ data, errors }) => {
+			// True if any  product in the cart has a tag equal to "restricted"
+			const restricted = data.nodes.some(
+				(n) => n?.tags?.some((t) => t.trim().toLowerCase() === "restricted")
+			);
+
+			// Update state
+			setHasRestricted(restricted);
+			
+		})
+		.catch((error) => {
+			// if we can't verify the cart, block rather than risk
+			// letting a restricted product through.
+			console.error("Restricted product tag lookup failed:", error);
+			setHasRestricted(true);
+		});
+	}, [cartLines]);
 
   // 3. Render a UI
   return (
@@ -28,4 +70,6 @@ function Extension() {
       </Banner>
     </BlockStack>
   );
+
+	
 }
