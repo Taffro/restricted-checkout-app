@@ -22,7 +22,8 @@ function Extension() {
   const { extension } = useApi();
   const cartLines = useCartLines();
 	const { query } = useApi();
-	const [hasRestricted, setHasRestricted] = useState(false);
+	// null = tag lookup not yet resolved; we fail closed until we know.
+	const [hasRestricted, setHasRestricted] = useState(null);
 	const [confirmed, setConfirmed] = useState(false);
 
   console.log("Cart Lines:", cartLines);
@@ -35,6 +36,9 @@ function Extension() {
 
 		// If no lines, nothing to restrict and we can exit out early
 		if (productIds.length === 0) { setHasRestricted(false); return; }
+
+		// Cart changed go back to "unknown" (blocked) until the fresh lookup resolves.
+		setHasRestricted(null);
 
 		// Fetch tags for each cart product by ID.
 		query(
@@ -66,7 +70,26 @@ function Extension() {
 	// Block checkout from progressing while there's a restricted product
 	// in the cart that the buyer hasn't confirmed eligibility for.
 	useBuyerJourneyIntercept(({ canBlockProgress }) => {
-		return canBlockProgress && hasRestricted && !confirmed
+		if (!canBlockProgress) {
+			return { behavior: "allow" };
+		}
+
+		// Tag lookup still in progress, reset to fail so no
+		// restricted products slip through
+		if (hasRestricted === null) {
+			return {
+				behavior: "block",
+				reason: "Cart verification in progress",
+				errors: [
+					{
+						message:
+							"We're still checking your cart. Please try again in a moment.",
+					},
+				],
+			};
+		}
+
+		return hasRestricted && !confirmed
 			? {
 					behavior: "block",
 					reason: "Restricted product not confirmed",
