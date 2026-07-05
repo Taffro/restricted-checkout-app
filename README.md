@@ -1,78 +1,61 @@
-# Shopify App Template - Extension only
+# Restricted Product Checkout Validation
 
-This is a template for building an [extension-only Shopify app](https://shopify.dev/docs/apps/build/app-extensions/build-extension-only-app). It contains the basics for building a Shopify app that uses only app extensions.
+Medik8 technical task — Option One. The rule: if the cart has any product tagged
+`restricted`, checkout is blocked until the customer confirms they're eligible.
 
-This template doesn't include a server or the ability to embed a page in the Shopify Admin. If you want either of these capabilities, choose the [Remix app template](https://github.com/Shopify/shopify-app-template-remix) instead.
+Built as a Checkout UI Extension. All the logic is in
+[`extensions/restricted-product-block/src/Checkout.jsx`](extensions/restricted-product-block/src/Checkout.jsx).
 
-Whether you choose to use this template or another one, you can use your preferred package manager and the Shopify CLI with [these steps](#installing-the-template).
+A bit of honest context: this was my first time working with Shopify checkout
+extensions. I chose to do Option One anyway because it's closer to the real work, and I
+wanted to show I'm happy to step outside my comfort zone and pick up something new —
+so this doubles as a snapshot of how I learn an unfamiliar area of a platform.
 
-## Benefits
+Examples of documentation I followed to assist in learning:
+https://shopify.dev/docs/api/checkout-ui-extensions/latest
+https://shopify.dev/docs/apps/build/checkout/start-building
+https://shopify.dev/docs/apps/build/checkout/cart-checkout-validation/create-client-side-validation
 
-Shopify apps are built on a variety of Shopify tools to create a great merchant experience. The [create an app](https://shopify.dev/docs/apps/getting-started/create) tutorial in our developer documentation will guide you through creating a Shopify app.
+## How it works
 
-This app template does little more than install the CLI and scaffold a repository.
+Product tags aren't available on cart lines at checkout, so I read the cart lines
+and query the Storefront API for each product's tags. If anything in the cart is
+tagged `restricted`, a confirmation checkbox appears, and `useBuyerJourneyIntercept`
+blocks checkout until it's ticked.
 
-## Getting started
+A couple of deliberate choices:
 
-### Requirements
+- **It fails closed.** If the tag lookup fails — or hasn't finished when the
+  customer hits pay — checkout is blocked rather than risk letting a restricted
+  product through. Downside: a hanging lookup keeps checkout blocked.
+- **It re-checks when the cart changes**, so a "not restricted" verdict from a
+  moment ago can't carry over after something's been added.
 
-1. You must [download and install Node.js](https://nodejs.org/en/download/) if you don't already have it.
-1. You must [create a Shopify partner account](https://partners.shopify.com/signup) if you don’t have one.
-1. You must create a store for testing if you don't have one, either a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or a [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store).
+## Assumptions
 
-### Installing the template
+Ticking the checkbox counts as explicit confirmation (it isn't saved to the order),
+and the tag is exactly `restricted` — case-insensitive, whitespace trimmed.
 
-This template can be installed using your preferred package manager:
+## Limitations
 
-Using yarn:
+The block only runs if the merchant places it in the checkout editor. If the rule
+absolutely must never be missed, a Shopify Function (checkout validation) would
+enforce it server-side — I went with the UI extension since the task asks for one,
+and it allows the confirmation interaction. Blocking progress also needs the
+`block_progress` capability, which requires Shopify Plus on a live store.
 
-```shell
-yarn create @shopify/app
+## What I'd do next
+
+- **Better feedback on failure.** Right now a blocked attempt shows Shopify's error
+  banner at the top of checkout, but the checkbox itself doesn't react. I'd set
+  state when the intercept blocks and show an inline banner next to the checkbox.
+- Move the customer-facing strings into the locale files via `useTranslate`.
+- Save the confirmation to the order (e.g. an attribute) for an audit trail.
+
+## Running it
+
 ```
-
-Using npm:
-
-```shell
-npm init @shopify/app@latest
-```
-
-Using pnpm:
-
-```shell
-pnpm create @shopify/app@latest
-```
-
-This will clone the template and install the required dependencies.
-
-#### Local Development
-
-[The Shopify CLI](https://shopify.dev/docs/apps/tools/cli) connects to an app in your Partners dashboard. It provides environment variables and runs commands in parallel.
-
-You can develop locally using your preferred package manager. Run one of the following commands from the root of your app.
-
-Using yarn:
-
-```shell
-yarn dev
-```
-
-Using npm:
-
-```shell
+cd restricted-checkout-app
+npm install
 npm run dev
 ```
-
-Using pnpm:
-
-```shell
-pnpm run dev
-```
-
-Open the URL generated in your console. Once you grant permission to the app, you can start development (such as generating extensions).
-
-## Developer resources
-
-- [Introduction to Shopify apps](https://shopify.dev/docs/apps/getting-started)
-- [App extensions](https://shopify.dev/docs/apps/build/app-extensions)
-- [Extension only apps](https://shopify.dev/docs/apps/build/app-extensions/build-extension-only-app)
-- [Shopify CLI](https://shopify.dev/docs/apps/tools/cli)
