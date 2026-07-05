@@ -8,7 +8,8 @@ import {
   useApi,
   useCartLines,
   useTranslate,
-	Checkbox
+	Checkbox,
+	useBuyerJourneyIntercept
 } from "@shopify/ui-extensions-react/checkout";
 
 // 1. Choose an extension target
@@ -62,7 +63,25 @@ function Extension() {
 		});
 	}, [cartLines]);
 
+	// Block checkout from progressing while there's a restricted product
+	// in the cart that the buyer hasn't confirmed eligibility for.
+	useBuyerJourneyIntercept(({ canBlockProgress }) => {
+		return canBlockProgress && hasRestricted && !confirmed
+			? {
+					behavior: "block",
+					reason: "Restricted product not confirmed",
+					errors: [
+						{
+							message:
+								"Please confirm you are eligible to purchase restricted products.",
+						},
+					],
+				}
+			: { behavior: "allow" };
+	});
+
   // 3. Render a UI
+	// Nothing to show unless the cart contains a restricted product.
 	if (!hasRestricted) {
 		return null;
 	}
@@ -73,6 +92,5 @@ function Extension() {
 				I confirm I am eligable to purchase restricted products.
 			</Checkbox>
 		</BlockStack>
-	)
-	
+	);
 }
