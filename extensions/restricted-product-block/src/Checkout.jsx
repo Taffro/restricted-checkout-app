@@ -1,36 +1,29 @@
-
 import { useState, useEffect } from "react";
 import {
-  reactExtension,
-  Banner,
-  BlockStack,
-  Text,
-  useApi,
-  useCartLines,
-  useTranslate,
+	reactExtension,
+	Banner,
+	BlockStack,
+	Text,
+	useApi,
+	useCartLines,
+	useTranslate,
 	Checkbox,
 	useBuyerJourneyIntercept
 } from "@shopify/ui-extensions-react/checkout";
 
-// 1. Choose an extension target
 export default reactExtension("purchase.checkout.block.render", () => (
-  <Extension />
+	<Extension />
 ));
 
 function Extension() {
-  const translate = useTranslate();
-  const { extension } = useApi();
-  const cartLines = useCartLines();
+	const translate = useTranslate();
 	const { query } = useApi();
+	const cartLines = useCartLines();
 	// null = tag lookup not yet resolved; we fail closed until we know.
 	const [hasRestricted, setHasRestricted] = useState(null);
 	const [confirmed, setConfirmed] = useState(false);
 
-  console.log("Cart Lines:", cartLines);
-
-  const productIds = cartLines.map(line => line.merchandise.product.id);
-  console.log("Product IDs:", productIds);
-	console.log("hasRestricted:", hasRestricted);
+	const productIds = cartLines.map(line => line.merchandise.product.id);
 
 	useEffect(() => {
 
@@ -44,20 +37,20 @@ function Extension() {
 		query(
 			`query ($ids: [ID!]!) {
 				nodes(ids: $ids) {
-					... on Product { id tags }	
+					... on Product { id tags }
 				}
 			}`,
 			{ variables: { ids: productIds }}
 		)
 		.then(({ data, errors }) => {
-			// True if any  product in the cart has a tag equal to "restricted"
+			// True if any product in the cart has a tag equal to "restricted"
 			const restricted = data.nodes.some(
 				(n) => n?.tags?.some((t) => t.trim().toLowerCase() === "restricted")
 			);
 
 			// Update state
 			setHasRestricted(restricted);
-			
+
 		})
 		.catch((error) => {
 			// if we can't verify the cart, block rather than risk
@@ -103,7 +96,6 @@ function Extension() {
 			: { behavior: "allow" };
 	});
 
-  // 3. Render a UI
 	// Nothing to show unless the cart contains a restricted product.
 	if (!hasRestricted) {
 		return null;
@@ -112,7 +104,7 @@ function Extension() {
 	return (
 		<BlockStack border="dotted" padding="tight">
 			<Checkbox checked={confirmed} onChange={setConfirmed}>
-				I confirm I am eligable to purchase restricted products.
+				I confirm I am eligible to purchase restricted products.
 			</Checkbox>
 		</BlockStack>
 	);
